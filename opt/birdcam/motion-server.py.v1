@@ -1,0 +1,105 @@
+import io
+import logging
+import socketserver
+import time
+import datetime
+import numpy as np
+import cv2
+from http import server
+from threading import Condition, Thread
+
+from picamera2 import Picamera2
+from picamera2.encoders import JpegEncoder
+from picamera2.outputs import FileOutput
+
+WIDTH = 2028
+HEIGHT = 1080
+
+# --- MOTION SETTINGS ---
+# Lower value = more sensitive. 0.02 means 2% of the screen must change.
+MOTION_THRESHOLD_RATIO = 0.03 
+# Sensitivity to color change in individual pixels (0-255)
+PIXEL_SENSITIVITY = 25 
+
+PAGE = """...""" # (Keep your existing HTML here)
+
+class StreamingOutput(io.BufferedIOBase):
+    def __init__(self):
+        self.frame = None
+        self.condition = Condition()
+
+    def write(self, buf):
+        with self.condition:
+            self.frame = buf
+            self.condition.notify_all()
+
+def detect_motion(output):
+    """Background thread to analyze the stream for motion."""
+    avg_frame = None
+    
+    print("Motion detection started...")
+    while True:
+        with output.condition:
+            output.condition.wait()
+            frame_data = output.frame
+
+        if frame_data is None:
+            continue
+
+        # Convert JPEG buffer to numpy array for processing
+        nparr = np.frombuffer(frame_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+        
+        # Resize for faster processing (optional, improves performance)
+        small_img = cv2.resize(img, (640, 360))
+        # Blur to reduce noise (like wind in leaves)
+        blurred = cv2.GaussianBlur(small_img, (21, 21), 0)
+
+        if avg_frame is None:
+            avg_frame = blurred.copy().astype("float")
+            continue
+
+        # Accumulate the weighted average to handle lighting changes
+        cv2.accumulateWeighted(blurred, avg_frame, 0.5)
+        frame_delta = cv2.absdiff(blurred, cv2.convertScaleAbs(avg_frame))
+        
+        # Threshold the delta to find significant changes
+        thresh = cv2.threshold(frame_delta, PIXEL_SENSITIVITY, 255, cv2.THRESH_BINARY)[1]
+        
+        # Calculate what percentage of the image changed
+        motion_percent = np.count_nonzero(thresh) / thresh.size
+
+        if motion_percent > MOTION_THRESHOLD_RATIO:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"{timestamp}.jpg"
+            with open(filename, "wb") as f:
+                f.write(frame_data)
+            print(f"Motion detected ({motion_percent:.2%})! Saved to {filename}")
+            # Cooldown to prevent spamming saves
+            time.sleep(2)
+
+# --- (Keep your StreamingHandler and StreamingServer classes as is) ---
+
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    # ... (unchanged)
+    pass
+
+class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    # ... (unchanged)
+    pass
+
+picam2 = Picamera2()
+picam2.configure(picam2.create_video_configuration(main={"size": (WIDTH, HEIGHT)}))
+output = StreamingOutput()
+picam2.start_recording(JpegEncoder(), FileOutput(output))
+
+# Start the motion detection thread
+motion_thread = Thread(target=detect_motion, args=(output,), daemon=True)
+motion_thread.start()
+
+try:
+    address = ('', 8000)
+    server = StreamingServer(address, StreamingHandler)
+    server.serve_forever()
+finally:
+    picam2.stop_recording()
