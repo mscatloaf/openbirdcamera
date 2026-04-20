@@ -14,6 +14,7 @@ $ sudo cp -r openbirdcamera/opt/birdcam /opt
 To enable the http video feed copy etc/systemd/system/birdcam.service to the same path on the root of the Pi's sdcard and run:
 
 $ sudo systemctl daemon-reload
+
 $ sudo systemctl enable --now birdcam.service
 
 The motion detection is the file motion-server.py
