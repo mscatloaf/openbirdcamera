@@ -1,6 +1,8 @@
 # openbirdcamera
 An Open Source Bird feeder camera with motion detection and http video feed.
 
+Disclaimer: generative AI was used to write this project 
+
 This project is designed for a Raspberry Pi 5 running Raspberry Pi OS with the High Quality camera and a telephoto lens, however it can be adapted easily to other pi models and cameras.
 
 The default paths for the scripts are /opt/birdcam, simply clone this reposity, cd into it and copy opt/birdcam to /opt
@@ -15,3 +17,4 @@ $ sudo systemctl daemon-reload
 $ sudo systemctl enable --now birdcam.service
 
 The motion detection is the file motion-server.py
+
