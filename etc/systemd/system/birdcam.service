@@ -1,0 +1,20 @@
+[Unit]
+Description=Birdcam MJPEG Streamer
+After=network.target
+
+[Service]
+# Run as the specified user
+User=catloaf
+# Path to the script
+ExecStart=/usr/bin/python3 /opt/birdcam/mjpeg_server.py
+# Where the script starts
+WorkingDirectory=/opt/birdcam
+# Restart the service if it crashes
+Restart=always
+RestartSec=5
+# Log output to syslog
+StandardOutput=inherit
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target
