@@ -18,9 +18,9 @@ HEIGHT = 1080
 
 # --- CONFIGURATION ---
 SAVE_DIR = "/opt/birdcam/images"
-MOTION_THRESHOLD_RATIO = 0.03 
-PIXEL_SENSITIVITY = 25 
-SAVE_COOLDOWN = 1  # Seconds to wait between saves
+MOTION_THRESHOLD_RATIO = 0.001
+PIXEL_SENSITIVITY = 10
+SAVE_COOLDOWN = 5  # Seconds to wait between saves
 
 # Ensure the directory exists
 try:
