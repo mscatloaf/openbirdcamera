@@ -17,5 +17,5 @@ $ sudo systemctl daemon-reload
 
 $ sudo systemctl enable --now birdcam.service
 
-The motion detection is the file motion-server.py
+The motion detection is the file motion-server.py, you can run it at boot by editing birdcam.service to start motion-server.py instead of mjpeg_server.py. you must also make sure you own /opt/birdcam/images.
 
